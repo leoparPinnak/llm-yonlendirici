@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "id": "key-1",
+      "name": "EVREN API Anahtarı 1 (Birincil)",
+      "key": "",
+      "daily_limit": 10000000,
+      "threshold_tokens": 50000,
+      "is_active": true
+    }
+  ]
+}

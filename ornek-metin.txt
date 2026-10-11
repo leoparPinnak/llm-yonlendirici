@@ -1,0 +1,4 @@
+Vektör veritabanları, metinleri sayısal temsillere çevirerek anlamsal arama yapılmasını sağlar.
+Bu dosya, paneldeki 'Veri Yükle' penceresinin metin dosyası yolunu test etmek için hazırlandı.
+RAG (Retrieval Augmented Generation) akışında önce belgeler parçalanır, sonra her parça vektöre çevrilir.
+Arama anında soru da vektöre çevrilir ve en yakın parçalar kosinüs benzerliğiyle bulunur.

@@ -1,0 +1,15 @@
+{
+  "listen_addr": "127.0.0.1:8088",
+  "upstream_base": "https://evren-llmapi.ssyz.org.tr/v1",
+  "default_daily_limit": 10000000,
+  "calculation_mode": "net",
+  "keys_file": "keys.json",
+  "log_file": "usage_history.jsonl",
+  "auto_inject_stream_usage": true,
+  "retry_on_quota_error": true,
+  "switch_threshold_tokens": 50000,
+  "max_images_per_request": 0,
+  "model_image_limits": {
+    "mimo-v2.6-pro": 4
+  }
+}

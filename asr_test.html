@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ses Tanıma Testi — qwen3-asr-1.7b</title>
+<style>
+  :root{
+    --bg:#0a0e17; --panel:#111726; --panel2:#161e30; --line:#22304a;
+    --txt:#e6edf7; --dim:#8fa3c0; --acc:#38e0c8; --acc2:#5b8dff;
+    --ok:#2ecc71; --err:#ff5f6d; --warn:#ffb84d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--txt);
+    font:15px/1.55 "Segoe UI",Roboto,system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 700px at 15% -10%,#16233c 0%,transparent 60%),
+               radial-gradient(900px 600px at 110% 10%,#123a3a 0%,transparent 55%),
+               var(--bg);
+    padding:28px 18px 60px;
+  }
+  .wrap{max-width:1000px;margin:0 auto}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:22px;margin:0;letter-spacing:.2px}
+  .badge{
+    font-size:12px;padding:4px 10px;border-radius:999px;
+    background:rgba(56,224,200,.13);color:var(--acc);border:1px solid rgba(56,224,200,.35)
+  }
+  .sub{color:var(--dim);font-size:13.5px;margin:0 0 20px}
+  .sub code{background:#0d1524;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#bcd3f2}
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:14px;padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);margin-bottom:16px
+  }
+  .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:7px;font-weight:600}
+  /* sürükle bırak alanı */
+  #drop{
+    border:2px dashed #2c3f60;border-radius:14px;padding:34px 20px;text-align:center;
+    background:linear-gradient(180deg,rgba(56,224,200,.04),rgba(91,141,255,.04));
+    transition:.18s;cursor:pointer;user-select:none
+  }
+  #drop:hover{border-color:#3f5c8a;background:rgba(91,141,255,.07)}
+  #drop.over{border-color:var(--acc);background:rgba(56,224,200,.13);transform:scale(1.008)}
+  #drop .big{font-size:42px;line-height:1;margin-bottom:10px}
+  #drop .t1{font-size:17px;font-weight:600}
+  #drop .t2{color:var(--dim);font-size:13px;margin-top:6px}
+  .formats{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .fmt{font-size:11px;color:#9fb6d6;background:#0d1524;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  /* dosya kartı */
+  #fileCard{display:none;margin-top:14px;background:#0d1524;border:1px solid var(--line);border-radius:12px;padding:14px}
+  #fileCard.on{display:block}
+  .frow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .ficon{font-size:26px}
+  .fmeta{flex:1;min-width:180px}
+  .fname{font-weight:600;word-break:break-all}
+  .fsize{color:var(--dim);font-size:12.5px}
+  audio{width:100%;margin-top:12px;height:38px}
+  /* form */
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  label.f{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:600}
+  input[type=text],select{
+    width:100%;background:#0b1220;border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:10px 12px;font:14px/1.3 inherit;outline:none
+  }
+  input[type=text]:focus,select:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(91,141,255,.15)}
+  .hint{font-size:12px;color:var(--dim);margin-top:6px}
+  /* butonlar */
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  button{font:600 14px/1 inherit;border-radius:10px;padding:12px 18px;border:1px solid var(--line);
+    background:#182238;color:var(--txt);cursor:pointer;transition:.15s}
+  button:hover:not(:disabled){background:#1f2c47;transform:translateY(-1px)}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  button.primary{
+    background:linear-gradient(135deg,var(--acc),var(--acc2));color:#04121a;border:none;
+    padding:13px 26px;font-size:15px;box-shadow:0 8px 22px rgba(56,224,200,.22)
+  }
+  button.primary:hover:not(:disabled){filter:brightness(1.07)}
+  button.ghost{background:transparent}
+  button.sm{padding:8px 12px;font-size:12.5px}
+  /* durum */
+  #status{margin-top:16px;display:none;align-items:center;gap:10px;font-size:14px}
+  #status.on{display:flex}
+  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:var(--acc);
+    border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  /* sonuç */
+  #result{display:none;margin-top:6px}
+  #result.on{display:block}
+  #transcript{
+    background:#08101c;border:1px solid var(--line);border-radius:12px;padding:16px;
+    font-size:17px;line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:70px
+  }
+  #transcript.ph{color:var(--dim);font-style:italic;font-size:14px}
+  .kv{display:flex;gap:18px;flex-wrap:wrap;color:var(--dim);font-size:12.5px;margin-top:10px}
+  .kv b{color:var(--txt);font-weight:600}
+  pre{background:#08101c;border:1px solid var(--line);border-radius:10px;padding:13px;overflow:auto;
+    font:12.5px/1.5 "Cascadia Mono",Consolas,monospace;color:#bcd3f2;max-height:320px;margin:10px 0 0}
+  details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-top:12px;user-select:none}
+  details summary:hover{color:var(--txt)}
+  /* hata */
+  #error{display:none;margin-top:16px;border:1px solid rgba(255,95,109,.5);background:rgba(255,95,109,.09);
+    border-radius:12px;padding:14px}
+  #error.on{display:block}
+  #error .et{color:var(--err);font-weight:700;margin-bottom:6px}
+  #error .em{font-size:13.5px;color:#ffd7db;white-space:pre-wrap;word-break:break-word}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,80px);background:#182238;
+    border:1px solid var(--acc);color:var(--txt);padding:11px 18px;border-radius:10px;font-size:13.5px;
+    transition:.25s;opacity:0;pointer-events:none;z-index:9}
+  .toast.on{transform:translate(-50%,0);opacity:1}
+  footer{color:var(--dim);font-size:12.5px;text-align:center;margin-top:22px;line-height:1.8}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dim);margin-right:6px}
+  .dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .dot.bad{background:var(--err);box-shadow:0 0 8px var(--err)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🎙️ Ses Tanıma Testi</h1>
+    <span class="badge">qwen3-asr-1.7b</span>
+    <span class="badge" id="modeBadge">yerel uç nokta</span>
+  </header>
+  <p class="sub">
+    Ses dosyasını aşağıya <b>sürükle bırak</b> → yazıya çevrilsin. İstek
+    <code id="epInline">/v1/audio/transcriptions</code> ucuna gider ve
+    <b>aktif kartın API anahtarıyla</b> Evren upstream'ine yönlendirilir.
+  </p>
+
+  <!-- 1) DOSYA -->
+  <div class="card">
+    <div id="drop">
+      <div class="big">🎧</div>
+      <div class="t1">Ses dosyasını buraya sürükle bırak</div>
+      <div class="t2">veya tıkla ve bilgisayarından seç &nbsp;•&nbsp; Ctrl+V ile yapıştır</div>
+      <div class="formats">
+        <span class="fmt">wav</span><span class="fmt">mp3</span><span class="fmt">m4a</span>
+        <span class="fmt">mp4</span><span class="fmt">webm</span><span class="fmt">ogg</span>
+        <span class="fmt">opus</span><span class="fmt">flac</span><span class="fmt">aac</span>
+        <span class="fmt">amr</span><span class="fmt">wma</span><span class="fmt">aiff</span>
+      </div>
+    </div>
+    <input type="file" id="picker" accept="audio/*,video/mp4,.wav,.mp3,.m4a,.mp4,.webm,.ogg,.oga,.opus,.flac,.aac,.amr,.wma,.aiff,.aif,.caf,.3gp" hidden>
+
+    <div id="fileCard">
+      <div class="frow">
+        <div class="ficon">🎵</div>
+        <div class="fmeta">
+          <div class="fname" id="fName">—</div>
+          <div class="fsize" id="fInfo">—</div>
+        </div>
+        <button class="ghost sm" id="btnClear">🗑️ Kaldır</button>
+      </div>
+      <audio id="player" controls preload="metadata"></audio>
+    </div>
+  </div>
+
+  <!-- 2) AYARLAR -->
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label class="f" for="endpoint">API adresi (uç nokta)</label>
+        <input type="text" id="endpoint" spellcheck="false">
+        <div class="hint" id="epHint"></div>
+      </div>
+      <div>
+        <label class="f" for="model">Model</label>
+        <input type="text" id="model" value="qwen3-asr-1.7b" spellcheck="false">
+        <label class="f" style="margin-top:12px" for="lang">Dil (opsiyonel)</label>
+        <select id="lang">
+          <option value="">otomatik algıla</option>
+          <option value="tr">Türkçe (tr)</option>
+          <option value="en">İngilizce (en)</option>
+          <option value="de">Almanca (de)</option>
+          <option value="fr">Fransızca (fr)</option>
+          <option value="es">İspanyolca (es)</option>
+          <option value="ar">Arapça (ar)</option>
+          <option value="ru">Rusça (ru)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="primary" id="btnGo" disabled>▶ Yazıya Çevir</button>
+      <button class="ghost" id="btn8110">8110'a çevir</button>
+      <button class="ghost" id="btn8088">8088'e çevir</button>
+      <button class="ghost" id="btnPing">🔌 Bağlantıyı sına</button>
+    </div>
+
+    <div id="status"><div class="spin"></div><span id="statusText">Gönderiliyor…</span></div>
+    <div id="error"><div class="et">❌ Hata</div><div class="em" id="errMsg"></div></div>
+  </div>
+
+  <!-- 3) SONUÇ -->
+  <div class="card" id="result">
+    <div class="lbl">Transkript</div>
+    <div id="transcript" class="ph">Sonuç burada görünecek…</div>
+    <div class="kv" id="kv"></div>
+    <div class="btns">
+      <button class="sm" id="btnCopy">📋 Kopyala</button>
+      <button class="sm" id="btnTxt">⬇️ .txt indir</button>
+      <button class="sm" id="btnJson">🧾 JSON indir</button>
+    </div>
+    <details>
+      <summary>Ham JSON yanıtı göster</summary>
+      <pre id="raw">{}</pre>
+    </details>
+  </div>
+
+  <footer>
+    <span class="dot" id="dot"></span><span id="connText">durum bilinmiyor</span><br>
+    Bu sayfa <b>http://127.0.0.1:8110/asr-test</b> adresinden de açılabilir (dosyayı çift tıklamak da çalışır).<br>
+    Ses istekleri sohbet oturumlarına karışmaz: ayrı sayaç, ayrı günlük.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---- uç nokta seçimi: http ile açıldıysa aynı kaynak, file:// ise 8110 ----
+  var served = location.protocol === "http:" || location.protocol === "https:";
+  var EP_8110 = "http://127.0.0.1:8110/v1/audio/transcriptions";
+  var EP_8088 = "http://127.0.0.1:8088/v1/audio/transcriptions";
+  var defEp = served ? (location.origin + "/v1/audio/transcriptions") : EP_8110;
+
+  var endpointEl = $("endpoint"), modelEl = $("model"), langEl = $("lang");
+  endpointEl.value = defEp;
+  $("epInline").textContent = defEp.replace(/^https?:\/\/[^/]+/, "") || defEp;
+  $("modeBadge").textContent = served ? ("sunucudan servis · " + location.host) : "dosyadan açıldı (file://)";
+  $("epHint").textContent = served
+    ? "Sayfa sunucudan açıldı: istek aynı kaynağa (origin) gider, ek ayar gerekmez."
+    : "Sayfa dosyadan açıldı: istek 127.0.0.1:8110 adresine gider (yerel CORS açık).";
+
+  var btn8110 = $("btn8110"), btn8088 = $("btn8088");
+  btn8110.onclick = function(){ endpointEl.value = EP_8110; toast("8110 uç noktası seçildi"); };
+  btn8088.onclick = function(){ endpointEl.value = EP_8088; toast("8088 uç noktası seçildi"); };
+
+  // ---- dosya seçimi ----
+  var drop = $("drop"), picker = $("picker"), fileCard = $("fileCard"),
+      player = $("player"), fName = $("fName"), fInfo = $("fInfo"),
+      btnGo = $("btnGo"), btnClear = $("btnClear");
+  var current = null, objectUrl = null, audioSeconds = 0;
+
+  function human(b){
+    if(b < 1024) return b + " B";
+    if(b < 1048576) return (b/1024).toFixed(1) + " KB";
+    return (b/1048576).toFixed(2) + " MB";
+  }
+  function secs(b){
+    // kaba süre tahmini (yalnızca meta veri gelene kadar): 16 KB/sn varsayımı
+    var s = b / 16000;
+    if(s < 1) return "< 1 sn";
+    if(s < 60) return "~" + Math.round(s) + " sn";
+    return "~" + Math.floor(s/60) + " dk " + Math.round(s%60) + " sn";
+  }
+  function fmtDur(d){
+    if(!isFinite(d) || d <= 0) return "";
+    var s = Math.round(d);
+    if(s < 60) return s + " sn";
+    return Math.floor(s/60) + " dk " + (s%60) + " sn";
+  }
+
+  function setFile(f){
+    if(!f){ return; }
+    var ok = /^audio\//.test(f.type) || /\.(wav|mp3|m4a|mp4|webm|ogg|oga|opus|flac|aac|amr|wma|aiff|aif|caf|3gp)$/i.test(f.name);
+    if(!ok && f.size > 0){
+      showError("Bu dosya bir ses dosyası gibi görünmüyor: " + (f.type || "bilinmeyen tür") +
+        "\nYine de denemek istersen dosyayı seçmeye devam edebilirsin.", null);
+    } else { hideError(); }
+    current = f;
+    audioSeconds = 0;
+    fName.textContent = f.name;
+    fInfo.textContent = human(f.size) + "  •  " + (f.type || "tür bilinmiyor") + "  •  " + secs(f.size);
+    if(objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+    player.src = objectUrl;
+    // GERÇEK süre tarayıcıdan okunur (tahmin değil) ve sunucuya
+    // X-Audio-Seconds başlığıyla bildirilir: ses sayacı doğru işlesin.
+    player.onloadedmetadata = function(){
+      var d = player.duration;
+      if(isFinite(d) && d > 0){
+        audioSeconds = Math.round(d);
+        fInfo.textContent = human(f.size) + "  •  " + (f.type || "tür bilinmiyor") + "  •  " + fmtDur(d);
+      }
+    };
+    fileCard.classList.add("on");
+    btnGo.disabled = false;
+    $("result").classList.remove("on");
+  }
+  function clearFile(){
+    current = null;
+    audioSeconds = 0;
+    if(objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
+    player.removeAttribute("src"); player.load();
+    fileCard.classList.remove("on");
+    btnGo.disabled = true;
+    picker.value = "";
+    hideError(); $("status").classList.remove("on");
+  }
+
+  drop.onclick = function(){ picker.click(); };
+  btnClear.onclick = function(e){ e.stopPropagation(); clearFile(); };
+  picker.onchange = function(){ if(picker.files && picker.files[0]) setFile(picker.files[0]); };
+
+  ["dragenter","dragover"].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); drop.classList.add("over"); });
+  });
+  ["dragleave","dragend"].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); drop.classList.remove("over"); });
+  });
+  drop.addEventListener("drop", function(e){
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove("over");
+    var dt = e.dataTransfer; if(!dt) return;
+    if(dt.files && dt.files.length){ setFile(dt.files[0]); }
+  });
+  // sayfanın geri kalanına bırakılırsa tarayıcı dosyayı açmasın
+  ["dragover","drop"].forEach(function(ev){
+    window.addEventListener(ev, function(e){ e.preventDefault(); });
+  });
+  // Ctrl+V ile yapıştırma
+  window.addEventListener("paste", function(e){
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    for(var i=0;i<items.length;i++){
+      if(items[i].kind === "file"){
+        var f = items[i].getAsFile();
+        if(f){ setFile(f); toast("Panodan alındı: " + f.name); }
+        return;
+      }
+    }
+  });
+
+  // ---- mesaj yardımcıları ----
+  var toastEl = $("toast"), toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg; toastEl.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("on"); }, 2200);
+  }
+  function showError(msg, status){
+    $("errMsg").textContent = (status ? ("HTTP " + status + "\n") : "") + msg;
+    $("error").classList.add("on");
+  }
+  function hideError(){ $("error").classList.remove("on"); }
+
+  // ---- bağlantı sınaması ----
+  $("btnPing").onclick = function(){
+    var ep = endpointEl.value.trim();
+    var t0 = Date.now();
+    setConn("wait", "sınanıyor…");
+    // Uç noktanın KENDİSİNE OPTIONS at: proxy bu isteği CORS başlıklarıyla
+    // kısa yoldan yanıtlar (204). /healthz gibi proxy DIŞI yollar file://
+    // modunda CORS başlığı taşımadığı için yanıltıcı "ulaşılamadı" veriyordu.
+    fetch(ep, { method: "OPTIONS" })
+      .then(function(r){ setConn("ok", "sunucu ayakta (" + r.status + ", " + (Date.now()-t0) + " ms)"); })
+      .catch(function(err){ setConn("bad", "ulaşılamadı: " + (err && err.message ? err.message : err)); });
+  };
+  function setConn(state, text){
+    var d = $("dot");
+    d.className = "dot" + (state === "ok" ? " ok" : state === "bad" ? " bad" : "");
+    $("connText").textContent = text;
+  }
+  // açılışta sessizce sına
+  setTimeout(function(){ $("btnPing").click(); }, 350);
+
+  // ---- asıl istek ----
+  var busy = false;
+  btnGo.onclick = function(){
+    if(busy || !current) return;
+    var ep = endpointEl.value.trim();
+    var model = modelEl.value.trim() || "qwen3-asr-1.7b";
+    var lang = langEl.value;
+    if(!ep){ showError("API adresi boş.", null); return; }
+
+    busy = true; btnGo.disabled = true; hideError();
+    $("result").classList.remove("on");
+    $("status").classList.add("on");
+    $("statusText").textContent = "Gönderiliyor… (" + current.name + " → " + ep + ")";
+
+    var fd = new FormData();
+    fd.append("file", current, current.name);
+    fd.append("model", model);
+    if(lang) fd.append("language", lang);
+
+    var t0 = Date.now();
+    var ctl = ("AbortController" in window) ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, 180000);
+    var headers = {};
+    if(audioSeconds > 0){ headers["X-Audio-Seconds"] = String(audioSeconds); }
+
+    fetch(ep, { method: "POST", body: fd, headers: headers, signal: ctl ? ctl.signal : undefined })
+      .then(function(res){
+        return res.text().then(function(txt){ return { status: res.status, ok: res.ok, txt: txt }; });
+      })
+      .then(function(r){
+        clearTimeout(timer);
+        var ms = Date.now() - t0;
+        $("status").classList.remove("on");
+        var data = null;
+        try { data = JSON.parse(r.txt); } catch(e){}
+
+        if(!r.ok){
+          var m = (data && data.error && (data.error.message || data.error)) || r.txt || "boş yanıt";
+          if(typeof m !== "string") m = JSON.stringify(m);
+          showError(m + "\n\nİpucu: dosya gerçekten ses mi? " + ep + " adresi çalışıyor mu? (🔌 Bağlantıyı sına)", r.status);
+          return;
+        }
+        var text = data ? (data.text || data.transcript || data.transcription || "") : r.txt;
+        if(!text && data){ text = "(yanıtta 'text' alanı yok — ham JSON'a bak)"; }
+        $("transcript").textContent = text;
+        $("transcript").classList.toggle("ph", !text);
+        $("raw").textContent = JSON.stringify(data !== null ? data : r.txt, null, 2);
+
+        var kv = [];
+        kv.push("durum <b>HTTP " + r.status + "</b>");
+        kv.push("süre <b>" + ms + " ms</b>");
+        kv.push("dosya <b>" + current.name + "</b>");
+        kv.push("model <b>" + model + "</b>");
+        if(data && data.usage){
+          if(data.usage.prompt_tokens != null) kv.push("ses token <b>" + data.usage.prompt_tokens + "</b>");
+          if(data.usage.total_tokens != null) kv.push("toplam token <b>" + data.usage.total_tokens + "</b>");
+        }
+        if(data && data.duration != null) kv.push("ses süresi <b>" + data.duration + " sn</b>");
+        else if(audioSeconds > 0) kv.push("ses süresi <b>" + audioSeconds + " sn</b>");
+        if(data && data.language) kv.push("algılanan dil <b>" + data.language + "</b>");
+        $("kv").innerHTML = kv.join(" &nbsp;•&nbsp; ");
+        $("result").classList.add("on");
+        $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        toast("✅ Transkript hazır (" + ms + " ms)");
+        lastResult = { text: text || "", json: data, file: current.name, ms: ms };
+      })
+      .catch(function(err){
+        clearTimeout(timer);
+        $("status").classList.remove("on");
+        if(err && err.name === "AbortError"){
+          showError("İstek 180 saniyede tamamlanmadı (zaman aşımı). Daha kısa bir ses dene.", null);
+        } else {
+          showError((err && err.message ? err.message : String(err)) +
+            "\n\nBu genellikle şu demektir: sunucu kapalı ya da tarayıcı isteği engelledi (CORS).\n" +
+            "Çözüm: sayfayı http://127.0.0.1:8110/asr-test adresinden aç.", null);
+        }
+      })
+      .then(function(){ busy = false; btnGo.disabled = !current; });
+  };
+
+  // ---- sonuç indirme/kopyalama ----
+  var lastResult = null;
+  function download(name, text, mime){
+    var blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+  }
+  $("btnCopy").onclick = function(){
+    if(!lastResult || !lastResult.text) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(lastResult.text) : Promise.reject())
+      .then(function(){ toast("📋 Kopyalandı"); })
+      .catch(function(){
+        var ta = document.createElement("textarea");
+        ta.value = lastResult.text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); toast("📋 Kopyalandı"); } catch(e){ toast("Kopyalanamadı"); }
+        document.body.removeChild(ta);
+      });
+  };
+  $("btnTxt").onclick = function(){
+    if(!lastResult) return;
+    download(lastResult.file.replace(/\.[^.]+$/, "") + ".txt", lastResult.text, "text/plain;charset=utf-8");
+  };
+  $("btnJson").onclick = function(){
+    if(!lastResult) return;
+    download(lastResult.file.replace(/\.[^.]+$/, "") + ".json",
+      JSON.stringify(lastResult.json !== null ? lastResult.json : { text: lastResult.text }, null, 2),
+      "application/json");
+  };
+})();
+</script>
+</body>
+</html>

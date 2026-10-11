@@ -1,0 +1,13 @@
+{
+  "mode": "failover",
+  "selected_id": "direct",
+  "proxies": [
+    {
+      "id": "direct",
+      "raw_url": "direct://",
+      "scheme": "direct",
+      "host": "Doğrudan Bağlantı (DIRECT)",
+      "alive": true
+    }
+  ]
+}
